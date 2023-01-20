@@ -1,18 +1,18 @@
-$TARGET_HOST=""
+$TARGET_HOST="https://dicom-paas-exp.dicom.ci.workspace.mshapis.com"
 $TEST_CLIENTS=20
 $USERS_PER_CLIENT=1
 $SPAWN_RATE=1
-$RESOURCE_GROUP="test-perf-storage"
-$AZURE_STORAGE_ACCOUNT="perfstorage"
+$RESOURCE_GROUP="kabalas-test-perf-storage"
+$AZURE_STORAGE_ACCOUNT="kabalasperfstorage"
 
 echo "creating storage account: $AZURE_STORAGE_ACCOUNT"
-az storage account create -n $AZURE_STORAGE_ACCOUNT -g $RESOURCE_GROUP --sku Standard_LRS -o json
+#az storage account create -n $AZURE_STORAGE_ACCOUNT -g $RESOURCE_GROUP --sku Standard_LRS -o json
 	
 echo "retrieving storage connection string"
 $AZURE_STORAGE_CONNECTION_STRING=$(az storage account show-connection-string --name $AZURE_STORAGE_ACCOUNT -g $RESOURCE_GROUP -o tsv)
 
 echo 'creating file share'
-az storage share create -n locust --connection-string $AZURE_STORAGE_CONNECTION_STRING -o json
+#az storage share create -n locust --connection-string $AZURE_STORAGE_CONNECTION_STRING -o json
 
 echo 'uploading simulator scripts'
 az storage file upload-batch --destination locust --source locust/ --connection-string $AZURE_STORAGE_CONNECTION_STRING -o json
