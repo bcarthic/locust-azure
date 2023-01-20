@@ -34,7 +34,7 @@ class APIUser(HttpUser):
         del dcm
         gc.collect()
 
-        files = {'file': ('dicomfile', resp.content, 'application/dicom')}
+        files = {'file': ('dicomfile', dicom_file_bytes, 'application/dicom')}
         body, content_type = encode_multipart_related(fields = files)
         headers = {'Accept':'application/dicom+json', "Content-Type":content_type, "Authorization":bearer_token} 
         self.client.post(f"/v1/studies", body, headers=headers)
