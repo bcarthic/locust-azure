@@ -1,0 +1,43 @@
+name: 'Deploy Locust'
+on:
+  workflow_dispatch:
+    inputs:
+      numberOfWorkers:
+        description: 'Number of Locust worker nodes (0 stops master)'
+        required: true
+        default: '1'
+      locustTargetUrl:
+        description: 'Locust target URL.'
+        required: true
+        default: 'https://my-sample-web.app'
+      resourceGroup:
+        description: 'Name of the resource group to deploy to.'
+        required: true
+        default: 'dicom-load-test-rg'
+      region:
+        description: 'Region to deploy to.'
+        required: true
+        default: 'westus3'
+      storageAccountName:
+        description: 'Name of the storage account.'
+        required: true
+        default: 'dicomloadteststorage'
+
+env:
+  bearerToken:         ${{secrets.BEARER_TOKEN}}
+  locustWorkerNodes:   ${{github.event.inputs.numberOfWorkers}}
+  locustTargetUrl:     ${{github.event.inputs.locustTargetUrl}}
+  resourceGroup:       ${{github.event.inputs.resourceGroup}}
+  region:              ${{github.event.inputs.region}}
+  storageAccountName:  ${{github.event.inputs.storageAccountName}}
+
+jobs:
+  build:
+
+    runs-on: ubuntu-latest
+    steps:
+      - name: Deploy Locust on Azure        
+        uses: actions/checkout@v2
+      - run: |
+          ../.azure-deploy.ps1 -ResourceGroup $resourceGroup -Region $region -StorageAccountName $storageAccountName -TargetHost $locustTargetUrl -BearerToken  (ConvertTo-SecureString $bearerToken -AsPlainText -Force) -NumberOfLocustWorkers $locustWorkerNodes
+        shell: pwsh  

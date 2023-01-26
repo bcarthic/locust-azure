@@ -1,1 +1,3 @@
 locust
+pydicom
+numpy

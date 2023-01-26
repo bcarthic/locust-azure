@@ -1,31 +1,57 @@
-$TARGET_HOST="https://dicom-paas-exp.dicom.ci.workspace.mshapis.com"
-$TEST_CLIENTS=20
-$USERS_PER_CLIENT=1
-$SPAWN_RATE=1
-$RESOURCE_GROUP="kabalas-test-perf-storage"
-$AZURE_STORAGE_ACCOUNT="kabalasperfstorage"
+param
+(
+    [Parameter(Mandatory=$True)]
+    [string]
+    $ResourceGroup,
 
-echo "creating storage account: $AZURE_STORAGE_ACCOUNT"
-az storage account create -n $AZURE_STORAGE_ACCOUNT -g $RESOURCE_GROUP --sku Standard_LRS -o json
-	
-echo "retrieving storage connection string"
-$AZURE_STORAGE_CONNECTION_STRING=$(az storage account show-connection-string --name $AZURE_STORAGE_ACCOUNT -g $RESOURCE_GROUP -o tsv)
+    [Parameter(Mandatory=$True)]
+    [string]
+    $Region,
 
-echo 'creating file share'
-az storage share create -n locust --connection-string $AZURE_STORAGE_CONNECTION_STRING -o json
+    [Parameter(Mandatory=$True)]
+    [string]
+    $StorageAccountName,
 
-echo 'uploading simulator scripts'
-az storage file upload-batch --destination locust --source locust/ --connection-string $AZURE_STORAGE_CONNECTION_STRING -o json
+    [Parameter(Mandatory=$True)]
+    [string]
+    $TargetHost,
 
-echo "deploying locust ($TEST_CLIENTS clients)..."
-$LOCUST_MONITOR=$(az deployment group create -g $RESOURCE_GROUP --template-file locust-arm-template.json --parameters host=$TARGET_HOST storageAccountName=$AZURE_STORAGE_ACCOUNT fileShareName=locust	numberOfInstances=$TEST_CLIENTS	--query properties.outputs.locustMonitor.value	-o tsv)
-sleep 10
+    [Parameter(Mandatory=$True)]
+    [Security.SecureString]
+    $BearerToken,
 
-echo "locust: endpoint: $LOCUST_MONITOR"
+    [Parameter(Mandatory=$False)]
+    [int]
+    $NumberOfLocustWorkers = 1
+)
 
-echo "locust: starting ..."
-$USER_COUNT=$(($USERS_PER_CLIENT*$TEST_CLIENTS))
-$SPAWN_RATE=$(($SPAWN_RATE*$TEST_CLIENTS))
-echo "locust: monitor available at: $LOCUST_MONITOR"
+Set-PSDebug -Off
+$ErrorActionPreference = "Stop"
+Write-Host "Ensure resource group and storage account exists"
 
-echo "done"
+$rsgExists = az group exists -n $ResourceGroup
+if ($rsgExists -eq 'false') {
+    Write-Host "Creating resource group"
+    az group create --name $ResourceGroup --location $Region
+}
+
+$nameAvailable = az storage account check-name -n $StorageAccountName --query 'nameAvailable' -o tsv
+if($nameAvailable -eq 'true') {
+    Write-Host "Creating storage account: $StorageAccountName with file share: locust"
+    az storage account create -n $StorageAccountName -g $ResourceGroup --sku Standard_LRS -o json
+    $connectionString=$(az storage account show-connection-string --name $StorageAccountName -g $ResourceGroup -o tsv)
+    az storage share create -n locust --connection-string $connectionString -o json
+}
+else {
+    $connectionString=$(az storage account show-connection-string --name $StorageAccountName -g $ResourceGroup -o tsv)
+}
+
+Write-Host "Uploading locust scripts"
+az storage file upload-batch --destination locust --source locust/ --connection-string $connectionString -o json
+
+Write-Host  "Deploying locust ($NumberOfLocustWorkers clients)..."
+$locust=$(az deployment group create -g $ResourceGroup --template-file locust-arm-template.json --parameters host=$TargetHost storageAccountName=$StorageAccountName numberOfInstances=$NumberOfLocustWorkers fileShareName=locust bearerToken=$BearerToken location=$Region --query properties.outputs.locustMonitor.value -o tsv)
+
+Start-Sleep -Seconds 10
+
+Write-Host "Locust: endpoint: $locust"

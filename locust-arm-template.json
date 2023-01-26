@@ -10,6 +10,7 @@
         },
         "fileShareName": {
             "type": "string",
+            "defaultValue": "locust",
             "metadata": {
                 "description": "Name of existing file share to be mounted"
             }
@@ -26,6 +27,12 @@
                 "description": "Number of instances of Container Group to deploy"
             }
         },
+        "bearerToken": {
+            "type": "securestring",
+            "metadata": {
+                "description": "bearerToken"
+            }
+        },
         "location": {
             "type": "string",
             "defaultValue": "[resourceGroup().location]",
@@ -35,7 +42,7 @@
         }
     },
     "variables": {
-        "image": "locustio/locust",
+        "image": "bcarthic/locust:latest",
         "cpuCores": "2",
         "masterMemoryInGb": "2",
         "clientMemoryInGb": "2",
@@ -57,6 +64,10 @@
                         "properties": {
                             "image": "[variables('image')]",
                             "environmentVariables": [
+                                {
+                                    "name": "bearerToken",
+                                    "secureValue": "[parameters('bearerToken')]"
+                                }
                             ],
                             "resources": {
                                 "requests": {
