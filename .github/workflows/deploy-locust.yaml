@@ -39,5 +39,5 @@ jobs:
       - name: Deploy Locust on Azure        
         uses: actions/checkout@v2
       - run: |
-          ../.azure-deploy.ps1 -ResourceGroup $resourceGroup -Region $region -StorageAccountName $storageAccountName -TargetHost $locustTargetUrl -BearerToken  (ConvertTo-SecureString $bearerToken -AsPlainText -Force) -NumberOfLocustWorkers $locustWorkerNodes
+          ../.azure-deploy.ps1 -ResourceGroup $resourceGroup -Region $region -StorageAccountName $storageAccountName -TargetHost $locustTargetUrl -BearerToken  (ConvertTo-SecureString -String $bearerToken -AsPlainText -Force) -NumberOfLocustWorkers $locustWorkerNodes
         shell: pwsh  
